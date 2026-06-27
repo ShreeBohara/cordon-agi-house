@@ -38,8 +38,8 @@ ever sees an SSE event stream, so it can be built entirely against a scripted re
 - [`EVENT_CONTRACT.md`](EVENT_CONTRACT.md) — the spec (read this first).
 - [`control_plane/models.py`](control_plane/models.py) — Python (Pydantic) shapes.
 - [`dashboard/lib/events.ts`](dashboard/lib/events.ts) — TypeScript mirror.
-- [`demo/scenario.json`](demo/scenario.json) — the Minimum-Viable-Demo timeline
-  (both `cordon_off` and `cordon_on`).
+- [`demo/scenario.json`](demo/scenario.json) — the scripted demo timelines
+  (deploy + payment, each off/on).
 
 This means two tracks can proceed in parallel:
 - **Backend** — control plane (Tool Proxy *first*), then real Daytona + 1Password, then the swarm.
@@ -56,15 +56,15 @@ This means two tracks can proceed in parallel:
   Accounts; programmatic revoke (modeled as broker-deny); the prompt-injection
   attack (deterministic); and the demo itself (`scenario.json` replay).
 
-## Status
+## Status — shipped
 
-- [x] Event contract locked (Python + TypeScript)
-- [x] MVD `scenario.json` (off + on timelines)
-- [ ] Phase 0 — accounts, keys, smoke tests
-- [ ] Phase 1 — control-plane spine
-- [ ] Phase 2 — real Daytona + 1Password
-- [ ] Phase 3 — swarm + Tool Proxy
-- [ ] Phase 4 — dashboard
-- [ ] Phase 5 — demo hardening + rehearsal
+- [x] Event contract (Python + TypeScript)
+- [x] Deterministic core — taint, broker, contact graph, cascade, signed Ed25519 flight recorder
+- [x] Real integrations — 1Password (Service Account resolve) + Daytona (sandbox freeze / network-block)
+- [x] OpenAI agent swarm behind the Tool Proxy + deterministic attack
+- [x] Live dashboard — contact graph, vault lock-snap, flight recorder, poisoned-email card
+- [x] Two attack scenarios — **DEPLOY** (poisoned email) and **PAYMENT** (poisoned invoice)
+- [x] Eval benchmark (provenance vs. naive detector) + live Daytona network-isolation proof
+- [x] Timeline player (play / pause / step / scrub / speed) + one-command `run.sh`
 
-See `../Docs/Ideas_Brainstorn/Final_2.md` for the full phase-by-phase plan.
+See [`docs/CORDON_MASTER.md`](docs/CORDON_MASTER.md) for the full reference (architecture, every feature, integrations, research, demo script, judge Q&A).
