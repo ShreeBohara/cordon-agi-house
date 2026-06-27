@@ -22,3 +22,6 @@ npm-debug.log*
 .DS_Store
 .idea/
 .vscode/
+
+# presenter notes — keep local, not in the public repo
+PITCH.md
