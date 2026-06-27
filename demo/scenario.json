@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "name": "CORDON — poisoned-email cascade",
+    "version": 1,
+    "secret_ref": "op://Production/Deploy Key/credential",
+    "notes": "delay_ms is the gap BEFORE emitting each event. The replay engine injects `seq` and `ts` into the envelope; they are not stored here. recorder_entry hashes are illustrative for replay — the live recorder computes real Ed25519 signatures and SHA-256 chains.",
+    "agents": [
+      { "agent_id": "orchestrator", "name": "Orchestrator", "role": "Delegates the human task", "holds_sensitive": false },
+      { "agent_id": "inbox", "name": "Inbox", "role": "Reads & triages email", "holds_sensitive": false },
+      { "agent_id": "research", "name": "Research", "role": "Looks things up on the web", "holds_sensitive": false },
+      { "agent_id": "coder", "name": "Coder", "role": "Writes & edits code", "holds_sensitive": false },
+      { "agent_id": "deployer", "name": "Deployer", "role": "Ships to production", "holds_sensitive": true }
+    ]
+  },
+
+  "cordon_off": [
+    { "delay_ms": 0,    "event": "scenario_started", "data": { "mode": "off", "agents": [
+      { "agent_id": "orchestrator", "name": "Orchestrator", "role": "Delegates the human task", "holds_sensitive": false },
+      { "agent_id": "inbox", "name": "Inbox", "role": "Reads & triages email", "holds_sensitive": false },
+      { "agent_id": "research", "name": "Research", "role": "Looks things up on the web", "holds_sensitive": false },
+      { "agent_id": "coder", "name": "Coder", "role": "Writes & edits code", "holds_sensitive": false },
+      { "agent_id": "deployer", "name": "Deployer", "role": "Ships to production", "holds_sensitive": true }
+    ] } },
+    { "delay_ms": 400,  "event": "credential_issued", "data": { "agent_id": "orchestrator", "secret_ref": "op://CORDON/Orchestrator Token/credential", "sensitive": false, "token_id": "tok_orc_9f2a1c", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "inbox", "secret_ref": "op://CORDON/Inbox Token/credential", "sensitive": false, "token_id": "tok_inb_4b7e22", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "research", "secret_ref": "op://CORDON/Research Token/credential", "sensitive": false, "token_id": "tok_res_1d90fa", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "coder", "secret_ref": "op://CORDON/Coder Token/credential", "sensitive": false, "token_id": "tok_cod_77ab03", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "deployer", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true, "token_id": "tok_dep_5e0c88", "onepassword_queried": true } },
+    { "delay_ms": 700,  "event": "contact_edge", "data": { "from_agent": "orchestrator", "to_agent": "inbox", "carried_taint": false, "reason": "delegation: triage the inbox" } },
+    { "delay_ms": 550,  "event": "tool_call", "data": { "agent_id": "inbox", "tool": "read_email", "trust": "untrusted", "summary": "Reads incoming email, including an attacker-authored message" } },
+    { "delay_ms": 500,  "event": "tainted", "data": { "agent_id": "inbox", "source": "read_email", "reason": "ingested untrusted email content" } },
+    { "delay_ms": 550,  "event": "contact_edge", "data": { "from_agent": "inbox", "to_agent": "research", "carried_taint": true, "reason": "handoff: look up the referenced links" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "research", "source": "inbox", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "research", "to_agent": "coder", "carried_taint": true, "reason": "handoff: apply the requested change" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "coder", "source": "research", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 700,  "event": "credential_requested", "data": { "agent_id": "coder", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true } },
+    { "delay_ms": 900,  "event": "credential_issued", "data": { "agent_id": "coder", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true, "token_id": "tok_LEAK_d4c0", "onepassword_queried": true } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "coder", "to_agent": "deployer", "carried_taint": true, "reason": "handoff: deploy to production" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "deployer", "source": "coder", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 800,  "event": "credential_exfiltrated", "data": { "agent_id": "deployer", "secret_ref": "op://Production/Deploy Key/credential", "destination": "http://attacker.evil/exfil", "note": "production deploy key sent to attacker endpoint" } },
+    { "delay_ms": 700,  "event": "scenario_complete", "data": { "mode": "off", "counters": { "exposed": 4, "quarantined": 0, "credentials_leaked": 1, "sandboxes_breached": 1, "contained": false } } }
+  ],
+
+  "cordon_on": [
+    { "delay_ms": 0,    "event": "scenario_started", "data": { "mode": "on", "agents": [
+      { "agent_id": "orchestrator", "name": "Orchestrator", "role": "Delegates the human task", "holds_sensitive": false },
+      { "agent_id": "inbox", "name": "Inbox", "role": "Reads & triages email", "holds_sensitive": false },
+      { "agent_id": "research", "name": "Research", "role": "Looks things up on the web", "holds_sensitive": false },
+      { "agent_id": "coder", "name": "Coder", "role": "Writes & edits code", "holds_sensitive": false },
+      { "agent_id": "deployer", "name": "Deployer", "role": "Ships to production", "holds_sensitive": true }
+    ] } },
+    { "delay_ms": 400,  "event": "credential_issued", "data": { "agent_id": "orchestrator", "secret_ref": "op://CORDON/Orchestrator Token/credential", "sensitive": false, "token_id": "tok_orc_9f2a1c", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "inbox", "secret_ref": "op://CORDON/Inbox Token/credential", "sensitive": false, "token_id": "tok_inb_4b7e22", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "research", "secret_ref": "op://CORDON/Research Token/credential", "sensitive": false, "token_id": "tok_res_1d90fa", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "coder", "secret_ref": "op://CORDON/Coder Token/credential", "sensitive": false, "token_id": "tok_cod_77ab03", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "deployer", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true, "token_id": "tok_dep_5e0c88", "onepassword_queried": true } },
+    { "delay_ms": 700,  "event": "contact_edge", "data": { "from_agent": "orchestrator", "to_agent": "inbox", "carried_taint": false, "reason": "delegation: triage the inbox" } },
+    { "delay_ms": 550,  "event": "tool_call", "data": { "agent_id": "inbox", "tool": "read_email", "trust": "untrusted", "summary": "Reads incoming email, including an attacker-authored message" } },
+    { "delay_ms": 500,  "event": "tainted", "data": { "agent_id": "inbox", "source": "read_email", "reason": "ingested untrusted email content" } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 1, "timestamp": "2026-06-27T13:05:01.100Z", "event_type": "tainted", "actor": "inbox", "details": { "source": "read_email" }, "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000", "entry_hash": "9a1f0c7b2e5d4a8c1b3f6e9d2c5a8b7e4d1c0f3a6b9e2d5c8f1a4b7e0d3c6f9a", "signature": "ed25519:8f2c…a91b", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 550,  "event": "contact_edge", "data": { "from_agent": "inbox", "to_agent": "research", "carried_taint": true, "reason": "handoff: look up the referenced links" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "research", "source": "inbox", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "research", "to_agent": "coder", "carried_taint": true, "reason": "handoff: apply the requested change" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "coder", "source": "research", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 700,  "event": "credential_requested", "data": { "agent_id": "coder", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true } },
+    { "delay_ms": 1200, "event": "credential_denied", "data": { "agent_id": "coder", "secret_ref": "op://Production/Deploy Key/credential", "sensitive": true, "reason": "requesting agent is tainted (provenance: read_email)", "onepassword_queried": false } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 2, "timestamp": "2026-06-27T13:05:06.300Z", "event_type": "credential_denied", "actor": "broker", "details": { "agent_id": "coder", "secret_ref": "op://Production/Deploy Key/credential", "onepassword_queried": false }, "prev_hash": "9a1f0c7b2e5d4a8c1b3f6e9d2c5a8b7e4d1c0f3a6b9e2d5c8f1a4b7e0d3c6f9a", "entry_hash": "3c6f9a2d5b8e1c4f7a0d3c6f9b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a7c0f3b6e", "signature": "ed25519:1b4e…7c0f", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 500,  "event": "patient_zero_confirmed", "data": { "confirmed_at": "coder", "origin": "inbox", "source": "read_email", "trifecta": { "tainted": true, "sensitive_access": true, "outbound_attempt": true } } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 3, "timestamp": "2026-06-27T13:05:06.800Z", "event_type": "patient_zero_confirmed", "actor": "cordon", "details": { "origin": "inbox", "confirmed_at": "coder" }, "prev_hash": "3c6f9a2d5b8e1c4f7a0d3c6f9b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a7c0f3b6e", "entry_hash": "6f9a3c2d8b5e1c4f7a0d6c3f9b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a7c0f9b3e", "signature": "ed25519:7c0f…3b6e", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 500,  "event": "quarantine_started", "data": { "patient_zero": "inbox", "exposed_set": ["inbox", "research", "coder"], "order": ["inbox", "research", "coder"] } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "inbox", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 0 } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "research", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 1 } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "coder", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 2 } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 4, "timestamp": "2026-06-27T13:05:08.150Z", "event_type": "quarantine_complete", "actor": "cordon", "details": { "quarantined": ["inbox", "research", "coder"], "untouched": ["orchestrator", "deployer"] }, "prev_hash": "6f9a3c2d8b5e1c4f7a0d6c3f9b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a7c0f9b3e", "entry_hash": "1d4a7c0f3b6e9a2d5b8e1c4f7a0d3c6f9b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a", "signature": "ed25519:3b6e…1d4a", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 600,  "event": "scenario_complete", "data": { "mode": "on", "counters": { "exposed": 3, "quarantined": 3, "credentials_leaked": 0, "sandboxes_breached": 0, "contained": true } } }
+  ],
+
+  "cordon_payment_off": [
+    { "delay_ms": 0,    "event": "scenario_started", "data": { "mode": "off", "agents": [
+      { "agent_id": "orchestrator", "name": "Orchestrator", "role": "Delegates the finance task", "holds_sensitive": false },
+      { "agent_id": "inbox", "name": "Inbox", "role": "Reads invoices & email", "holds_sensitive": false },
+      { "agent_id": "analyst", "name": "Analyst", "role": "Verifies vendors on the web", "holds_sensitive": false },
+      { "agent_id": "finance", "name": "Finance", "role": "Prepares & submits payments", "holds_sensitive": false },
+      { "agent_id": "treasury", "name": "Treasury", "role": "Holds the payment rails credential", "holds_sensitive": true }
+    ] } },
+    { "delay_ms": 400,  "event": "credential_issued", "data": { "agent_id": "orchestrator", "secret_ref": "op://CORDON/Orchestrator Token/credential", "sensitive": false, "token_id": "tok_orc_9f2a1c", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "inbox", "secret_ref": "op://CORDON/Inbox Token/credential", "sensitive": false, "token_id": "tok_inb_4b7e22", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "analyst", "secret_ref": "op://CORDON/Analyst Token/credential", "sensitive": false, "token_id": "tok_ana_1d90fa", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "finance", "secret_ref": "op://CORDON/Finance Token/credential", "sensitive": false, "token_id": "tok_fin_77ab03", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "treasury", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true, "token_id": "tok_tre_5e0c88", "onepassword_queried": true } },
+    { "delay_ms": 700,  "event": "contact_edge", "data": { "from_agent": "orchestrator", "to_agent": "inbox", "carried_taint": false, "reason": "delegation: process the invoice queue" } },
+    { "delay_ms": 550,  "event": "tool_call", "data": { "agent_id": "inbox", "tool": "read_invoice", "trust": "untrusted", "summary": "Reads an incoming vendor invoice (attacker-authored)" } },
+    { "delay_ms": 500,  "event": "tainted", "data": { "agent_id": "inbox", "source": "read_invoice", "reason": "ingested untrusted invoice content" } },
+    { "delay_ms": 550,  "event": "contact_edge", "data": { "from_agent": "inbox", "to_agent": "analyst", "carried_taint": true, "reason": "handoff: verify the vendor" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "analyst", "source": "inbox", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "analyst", "to_agent": "finance", "carried_taint": true, "reason": "handoff: prepare the payment" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "finance", "source": "analyst", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 700,  "event": "credential_requested", "data": { "agent_id": "finance", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true } },
+    { "delay_ms": 900,  "event": "credential_issued", "data": { "agent_id": "finance", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true, "token_id": "tok_LEAK_d4c0", "onepassword_queried": true } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "finance", "to_agent": "treasury", "carried_taint": true, "reason": "handoff: execute the wire" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "treasury", "source": "finance", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 800,  "event": "credential_exfiltrated", "data": { "agent_id": "treasury", "secret_ref": "op://Production/Payment API Key/credential", "destination": "wire $48,000 → acct 8841-220197", "note": "funds wired to an attacker-controlled account" } },
+    { "delay_ms": 700,  "event": "scenario_complete", "data": { "mode": "off", "counters": { "exposed": 4, "quarantined": 0, "credentials_leaked": 1, "sandboxes_breached": 1, "contained": false } } }
+  ],
+
+  "cordon_payment_on": [
+    { "delay_ms": 0,    "event": "scenario_started", "data": { "mode": "on", "agents": [
+      { "agent_id": "orchestrator", "name": "Orchestrator", "role": "Delegates the finance task", "holds_sensitive": false },
+      { "agent_id": "inbox", "name": "Inbox", "role": "Reads invoices & email", "holds_sensitive": false },
+      { "agent_id": "analyst", "name": "Analyst", "role": "Verifies vendors on the web", "holds_sensitive": false },
+      { "agent_id": "finance", "name": "Finance", "role": "Prepares & submits payments", "holds_sensitive": false },
+      { "agent_id": "treasury", "name": "Treasury", "role": "Holds the payment rails credential", "holds_sensitive": true }
+    ] } },
+    { "delay_ms": 400,  "event": "credential_issued", "data": { "agent_id": "orchestrator", "secret_ref": "op://CORDON/Orchestrator Token/credential", "sensitive": false, "token_id": "tok_orc_9f2a1c", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "inbox", "secret_ref": "op://CORDON/Inbox Token/credential", "sensitive": false, "token_id": "tok_inb_4b7e22", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "analyst", "secret_ref": "op://CORDON/Analyst Token/credential", "sensitive": false, "token_id": "tok_ana_1d90fa", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "finance", "secret_ref": "op://CORDON/Finance Token/credential", "sensitive": false, "token_id": "tok_fin_77ab03", "onepassword_queried": true } },
+    { "delay_ms": 220,  "event": "credential_issued", "data": { "agent_id": "treasury", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true, "token_id": "tok_tre_5e0c88", "onepassword_queried": true } },
+    { "delay_ms": 700,  "event": "contact_edge", "data": { "from_agent": "orchestrator", "to_agent": "inbox", "carried_taint": false, "reason": "delegation: process the invoice queue" } },
+    { "delay_ms": 550,  "event": "tool_call", "data": { "agent_id": "inbox", "tool": "read_invoice", "trust": "untrusted", "summary": "Reads an incoming vendor invoice (attacker-authored)" } },
+    { "delay_ms": 500,  "event": "tainted", "data": { "agent_id": "inbox", "source": "read_invoice", "reason": "ingested untrusted invoice content" } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 1, "timestamp": "2026-06-27T13:20:01.100Z", "event_type": "tainted", "actor": "inbox", "details": { "source": "read_invoice" }, "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000", "entry_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2", "signature": "ed25519:a1b2…f0a1", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 550,  "event": "contact_edge", "data": { "from_agent": "inbox", "to_agent": "analyst", "carried_taint": true, "reason": "handoff: verify the vendor" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "analyst", "source": "inbox", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 500,  "event": "contact_edge", "data": { "from_agent": "analyst", "to_agent": "finance", "carried_taint": true, "reason": "handoff: prepare the payment" } },
+    { "delay_ms": 350,  "event": "tainted", "data": { "agent_id": "finance", "source": "analyst", "reason": "received tainted data via handoff" } },
+    { "delay_ms": 700,  "event": "credential_requested", "data": { "agent_id": "finance", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true } },
+    { "delay_ms": 1200, "event": "credential_denied", "data": { "agent_id": "finance", "secret_ref": "op://Production/Payment API Key/credential", "sensitive": true, "reason": "requesting agent is tainted (provenance: read_invoice)", "onepassword_queried": false } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 2, "timestamp": "2026-06-27T13:20:06.300Z", "event_type": "credential_denied", "actor": "broker", "details": { "agent_id": "finance", "secret_ref": "op://Production/Payment API Key/credential", "onepassword_queried": false }, "prev_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2", "entry_hash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3", "signature": "ed25519:b2c3…b2c3", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 500,  "event": "patient_zero_confirmed", "data": { "confirmed_at": "finance", "origin": "inbox", "source": "read_invoice", "trifecta": { "tainted": true, "sensitive_access": true, "outbound_attempt": true } } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 3, "timestamp": "2026-06-27T13:20:06.800Z", "event_type": "patient_zero_confirmed", "actor": "cordon", "details": { "origin": "inbox", "confirmed_at": "finance" }, "prev_hash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3", "entry_hash": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4", "signature": "ed25519:c3d4…c3d4", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 500,  "event": "quarantine_started", "data": { "patient_zero": "inbox", "exposed_set": ["inbox", "analyst", "finance"], "order": ["inbox", "analyst", "finance"] } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "inbox", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 0 } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "analyst", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 1 } },
+    { "delay_ms": 450,  "event": "agent_quarantined", "data": { "agent_id": "finance", "actions": ["credential_revoked", "sandbox_frozen", "network_blocked"], "order_index": 2 } },
+    { "delay_ms": 300,  "event": "recorder_entry", "data": { "seq": 4, "timestamp": "2026-06-27T13:20:08.150Z", "event_type": "quarantine_complete", "actor": "cordon", "details": { "quarantined": ["inbox", "analyst", "finance"], "untouched": ["orchestrator", "treasury"] }, "prev_hash": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4", "entry_hash": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5", "signature": "ed25519:d4e5…d4e5", "pubkey_id": "ed25519:cordon-2026" } },
+    { "delay_ms": 600,  "event": "scenario_complete", "data": { "mode": "on", "counters": { "exposed": 3, "quarantined": 3, "credentials_leaked": 0, "sandboxes_breached": 0, "contained": true } } }
+  ]
+}
