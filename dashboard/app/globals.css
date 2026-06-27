@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  /* surfaces — deep ink, lifted panels, hairline lines */
+  --color-ink: #0b0d11;
+  --color-panel: #13161c;
+  --color-panel2: #181c24;
+  --color-line: #ffffff14;
+  --color-line2: #ffffff26;
+  --color-text: #e7e9ee;
+  --color-muted: #9aa3b2;
+  --color-faint: #59616f;
+
+  /* state — the ONLY meaning-bearing colors */
+  --color-healthy: #34d399;      /* green  */
+  --color-tainted: #f59e0b;      /* amber  */
+  --color-compromised: #fb3b53;  /* red    */
+  --color-quarantined: #4f8cff;  /* blue   */
+  --color-locked: #6b7280;       /* grey   */
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+:root { color-scheme: dark; }
+
+html, body { height: 100%; }
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  /* subtle top vignette for depth */
+  background-image: radial-gradient(130% 90% at 50% -20%, #161b26 0%, rgba(11, 13, 17, 0) 60%);
+  background-attachment: fixed;
+}
+
+/* smooth state-color transitions for graph nodes */
+.cordon-anim {
+  transition: border-color 0.45s ease, box-shadow 0.45s ease, background-color 0.45s ease, color 0.3s ease;
+}
+
+/* React Flow: let our own background show through */
+.react-flow__attribution { display: none; }
+.react-flow__edge-path { transition: stroke 0.4s ease; }
+
+/* thin, quiet scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #ffffff20 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #ffffff1f; border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }
