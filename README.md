@@ -5,9 +5,9 @@ contains a prompt-injection outbreak *before* it becomes a breach.
 
 > Built at **Agent Identity Build Day** — AGI House, June 2026 (1Password · Daytona · NeoSigma).
 
-**🔗 Live demo: <https://dashboard-jade-ten-93.vercel.app>**
-<!-- ▶️ Add your demo video: **▶️ Demo video:** https://youtu.be/YOUR_VIDEO_ID -->
-**▶️ Demo video:** _coming soon_
+**🔗 Live demo: <https://dashboard-jade-ten-93.vercel.app>** · **▶️ [Watch the demo](https://youtu.be/wDH33k4yc7Q)**
+
+[![Watch the CORDON demo](https://img.youtube.com/vi/wDH33k4yc7Q/maxresdefault.jpg)](https://youtu.be/wDH33k4yc7Q)
 
 ---
 
