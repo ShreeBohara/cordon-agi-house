@@ -25,3 +25,6 @@ npm-debug.log*
 
 # presenter notes — keep local, not in the public repo
 PITCH.md
+
+# vercel
+.vercel
