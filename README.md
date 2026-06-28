@@ -5,9 +5,9 @@ contains a prompt-injection outbreak *before* it becomes a breach.
 
 > Built at **Agent Identity Build Day** — AGI House, June 2026 (1Password · Daytona · NeoSigma).
 
-<!-- ▶️ DEMO VIDEO: replace the line below with your embed/thumbnail, e.g.
-[![Watch the 3-minute demo](docs/media/video-thumb.png)](https://youtu.be/YOUR_VIDEO_ID) -->
-**▶️ 3-minute demo video:** _coming soon_
+**🔗 Live demo: <https://dashboard-jade-ten-93.vercel.app>**
+<!-- ▶️ Add your demo video: **▶️ Demo video:** https://youtu.be/YOUR_VIDEO_ID -->
+**▶️ Demo video:** _coming soon_
 
 ---
 
@@ -28,8 +28,8 @@ credentials.)*
 And in a **swarm** it's worse: a hijacked agent passes the poisoned instruction to the next
 agent during normal delegation — the compromise spreads **agent to agent, like a virus.**
 
-<!-- 🖼️ SCREENSHOT — the breach (CORDON OFF): ![breach](docs/media/breach.png) -->
-*Screenshot — the breach (CORDON OFF): coming soon*
+![CORDON OFF — the breach: the poison spreads agent-to-agent and the production key is exfiltrated](docs/media/breach.png)
+*Above: **CORDON OFF** — the injection spreads and the production key is stolen.*
 
 ---
 
@@ -54,8 +54,8 @@ authorized what, and why it was stopped.
 > **In one line:** Identity says *who an agent is*. CORDON adds the missing axis —
 > ***who it touched it with*** — and contains the breach before it spreads.
 
-<!-- 🖼️ SCREENSHOT — the containment (CORDON ON, the lock-snap): ![contained](docs/media/contained.png) -->
-*Screenshot — the containment (CORDON ON): coming soon*
+![CORDON ON — contained: the key is withheld (1Password never queried) and the exposed agents are quarantined](docs/media/contained.png)
+*Above: **CORDON ON** — same attack, the key is withheld and the exposed chain is quarantined.*
 
 ---
 
