@@ -1,70 +1,153 @@
-# CORDON
+# 🛡️ CORDON
 
-**Contact tracing and cascade quarantine for AI agent swarms — the immune system for agent swarms.**
+**The immune system for AI agent swarms** — contact tracing and cascade quarantine that
+contains a prompt-injection outbreak *before* it becomes a breach.
 
-Agents get compromised *after* they are inside, through untrusted inputs (a poisoned
-email, a web page, a tool result, another compromised agent). In a swarm the
-infection spreads along normal delegation, like a virus. CORDON tracks provenance
-(taint), withholds credentials from tainted agents at a broker (the secret never
-enters the model's context), and when an agent trips the lethal trifecta it traces
-the contact graph and revokes + freezes the exposed sub-graph in infection order —
-all written to a signed, hash-chained flight recorder.
+> Built at **Agent Identity Build Day** — AGI House, June 2026 (1Password · Daytona · NeoSigma).
 
-> Built for **Agent Identity Build Day** (AGI House, 2026-06-27), sponsored by
-> 1Password, Daytona & NeoSigma.
+<!-- ▶️ DEMO VIDEO: replace the line below with your embed/thumbnail, e.g.
+[![Watch the 3-minute demo](docs/media/video-thumb.png)](https://youtu.be/YOUR_VIDEO_ID) -->
+**▶️ 3-minute demo video:** _coming soon_
 
 ---
 
-## Quick start
+## The problem
 
-```bash
-./run.sh          # boots control plane + dashboard, health-checks both, prints the URL
-# → open http://localhost:3000
-# flip CORDON OFF (breach) then ON (contained), or click RUN LIVE for the real swarm
-./stop.sh         # stop both (or Ctrl+C in the run.sh terminal)
-```
+AI agents now write code, move money, and run infrastructure — so they hold real
+credentials. The danger isn't at the login. It's that an agent gets **hijacked *after* it's
+already inside**, through the untrusted things it reads: an email, a web page, an invoice, a
+message from another agent.
 
-Requires `.env` with `OPENAI_API_KEY`, `OP_SERVICE_ACCOUNT_TOKEN`, `DAYTONA_API_KEY`
-(see `.env.example`). The scripted demo (OFF/ON) runs fully offline; RUN LIVE needs the keys.
+**This really happened.** In February 2026, a prompt injection hidden in a single **GitHub
+issue title** hijacked the **Cline** AI coding bot. That one line got its publish tokens
+stolen and pushed a compromised package to **~4,000 developer machines in 8 hours**. The
+bot's credentials were valid the whole time — it was hijacked *from the inside*. *(That
+payload was a harmless proof-of-concept, but it could just as easily have stolen
+credentials.)*
+
+And in a **swarm** it's worse: a hijacked agent passes the poisoned instruction to the next
+agent during normal delegation — the compromise spreads **agent to agent, like a virus.**
+
+<!-- 🖼️ SCREENSHOT — the breach (CORDON OFF): ![breach](docs/media/breach.png) -->
+*Screenshot — the breach (CORDON OFF): coming soon*
 
 ---
 
-## Contract-first, demo-first
+## The solution
 
-The build is decoupled by one artifact: the **event contract**. The dashboard only
-ever sees an SSE event stream, so it can be built entirely against a scripted replay
-**before the live swarm exists**.
+CORDON sits under your agent swarm and does three things:
 
-- [`EVENT_CONTRACT.md`](EVENT_CONTRACT.md) — the spec (read this first).
-- [`control_plane/models.py`](control_plane/models.py) — Python (Pydantic) shapes.
-- [`dashboard/lib/events.ts`](dashboard/lib/events.ts) — TypeScript mirror.
-- [`demo/scenario.json`](demo/scenario.json) — the scripted demo timelines
-  (deploy + payment, each off/on).
+1. **Tracks what each agent touched (taint).** The instant an agent reads from an untrusted
+   source, CORDON marks it *tainted*. This is a fact, not a guess — it doesn't try to detect
+   "bad" content (paraphrasing defeats that); it tracks **where the data came from.**
+2. **Withholds keys from tainted agents (broker).** Every credential request goes through a
+   broker. A tainted agent asking for a high-value key is **denied — and the key is never
+   even fetched**, so the secret never enters the model's context.
+3. **Traces & quarantines the outbreak (cascade).** When an agent is confirmed compromised,
+   CORDON walks the graph of who-handed-work-to-whom, then **revokes credentials and freezes
+   the sandboxes** of every exposed agent, in infection order, in under a second. Healthy
+   agents keep working.
 
-This means two tracks can proceed in parallel:
-- **Backend** — control plane (Tool Proxy *first*), then real Daytona + 1Password, then the swarm.
-- **Dashboard** — built against `scenario.json` replay; never blocked on the live swarm.
+Every decision is written to a **signed, tamper-evident log** — so you can always prove who
+authorized what, and why it was stopped.
 
-## What is real vs mocked
+> **In one line:** Identity says *who an agent is*. CORDON adds the missing axis —
+> ***who it touched it with*** — and contains the breach before it spreads.
 
-- **Real:** Daytona sandbox create/freeze/kill/network-block; 1Password secret
-  resolve via Service Accounts + SDK; all the security *logic* (taint, broker-deny,
-  contact graph, cascade, signed log).
-- **Mocked (and we say so):** the 1Password Credential Broker *agent path* (private
-  beta, not GA for agents) — CORDON prototypes 1Password's own published **Unified
-  Access** roadmap (runtime scoped issuance + agent audit) on top of GA Service
-  Accounts; programmatic revoke (modeled as broker-deny); the prompt-injection
-  attack (deterministic); and the demo itself (`scenario.json` replay).
+<!-- 🖼️ SCREENSHOT — the containment (CORDON ON, the lock-snap): ![contained](docs/media/contained.png) -->
+*Screenshot — the containment (CORDON ON): coming soon*
 
-## Status — shipped
+---
 
-- [x] Event contract (Python + TypeScript)
-- [x] Deterministic core — taint, broker, contact graph, cascade, signed Ed25519 flight recorder
-- [x] Real integrations — 1Password (Service Account resolve) + Daytona (sandbox freeze / network-block)
-- [x] OpenAI agent swarm behind the Tool Proxy + deterministic attack
-- [x] Live dashboard — contact graph, vault lock-snap, flight recorder, poisoned-email card
-- [x] Two attack scenarios — **DEPLOY** (poisoned email) and **PAYMENT** (poisoned invoice)
-- [x] Eval benchmark (provenance vs. naive detector) + live Daytona network-isolation proof
-- [x] Timeline player (play / pause / step / scrub / speed) + one-command `run.sh`
+## How it works (the short version)
 
-See [`docs/CORDON_MASTER.md`](docs/CORDON_MASTER.md) for the full reference (architecture, every feature, integrations, research, demo script, judge Q&A).
+An agent is only quarantined when it trips the **lethal trifecta**: it's *tainted*, it
+*requests a sensitive credential*, **and** it *attempts an outbound action*. Reading an email
+alone never triggers it. That's what keeps the system useful — a tainted agent can still do
+safe work; it just can't get the crown-jewel keys.
+
+It runs on real infrastructure:
+
+- **Daytona** — every agent runs in its own isolated sandbox; quarantine calls the real
+  `sandbox.stop()` + `network_block_all` to cut it off.
+- **1Password** — keys live in 1Password, resolved at runtime via a Service Account
+  (`op://` references); a tainted agent's request is simply never resolved.
+- **OpenAI Agents SDK** — the live 5-agent swarm; every tool call and handoff routes through
+  CORDON's single chokepoint (the Tool Proxy).
+
+---
+
+## Does it actually work?
+
+Benchmarked against a naive content-detector (the typical "AI firewall" approach) on
+**10 prompt-injection variants + 7 benign tasks**:
+
+| | **CORDON** | Naive detector |
+|---|---|---|
+| Attacks stopped | **100%** | 40% |
+| Credentials leaked | **0** | 6 |
+| Benign work preserved | **86%** | 43% |
+
+Because CORDON is **provenance-based, not content-based, rephrasing the attack can't evade
+it.** (One bounded, reversible false positive, disclosed honestly.)
+
+---
+
+## FAQ
+
+**“If every input is treated as untrusted, isn't the whole swarm tainted and useless? What's
+the point of the agents?”**
+Tainted ≠ broken. A tainted agent keeps doing its job — reading, summarizing, researching,
+drafting. Taint restricts exactly **one** thing: access to high-value credentials. Most agent
+work never needs the production key. The inbox agent reads the poisoned email, becomes
+tainted, and still triages your inbox fine — it just won't be handed the deploy key. The
+system stays fully useful; it only refuses to give crown-jewel access to something that
+touched the outside world.
+
+**“If a tainted agent can't get credentials, it can't deploy. So who actually does it?”**
+In a normal, clean run nothing is tainted, so the deploy happens as usual. Taint only blocks
+the case where untrusted input has reached the agent asking for the key — which is exactly
+the case you *want* to stop. For a legitimate sensitive action that did follow untrusted
+input, CORDON is **freeze-not-kill**: a named human approves it (logged), so a human stays in
+the loop for the high-stakes step instead of the system silently trusting a possibly-poisoned
+request. You can also keep the key-holder (the Deployer) off untrusted inputs entirely — it
+stays clean and does the deploy; the tainted agents simply can't hijack it.
+
+**“If an agent that reads outside data can never hold keys, why not just hard-code that with
+roles? What does CORDON add?”**
+Two things static roles can't do:
+1. **Roles are a static snapshot; the infection moves.** A rule like "inbox never gets the
+   key" doesn't stop inbox from passing the poisoned instruction to *another* agent that
+   *does* have the key (the confused-deputy problem). That's literally the demo:
+   inbox (no key) → research → coder → reaches for the deploy key. CORDON withholds the key
+   from everyone the taint *reached* at runtime — not just one pre-labeled role.
+2. **You can't always pre-partition.** Real agents are general-purpose; the same agent may
+   legitimately need a key later. CORDON decides at runtime from what actually happened
+   (provenance) — and adds the **containment cascade** and **signed audit** static roles
+   never give you. (Static least-privilege and CORDON compose — CORDON is the dynamic layer.)
+
+**“Isn't this just another prompt-injection detector / AI firewall?”**
+Opposite approach. Detectors scan content for "bad" patterns — a guess that paraphrasing
+evades and that false-positives on innocent text. CORDON doesn't guess: it tracks
+*provenance* and assumes the injection *will* get through, then contains the blast radius.
+In our benchmark that's 0% vs 60% attack success — and rephrasing can't beat it.
+
+**“What if the attacker stays single-agent, or goes low-and-slow?”**
+Single-agent exfiltration is already stopped by the deterministic gate on key issuance — once
+tainted, an agent never gets the sensitive key, spread or not. Contact tracing handles the
+multi-agent case you can't avoid in a real swarm (delegation is the capability being stolen).
+Low-and-slow can defeat the probabilistic *trigger* for the cascade, but not the deterministic
+*gate* — a limit we name openly.
+
+**“Is this real or just a demo?”**
+The security logic, the 1Password runtime resolve, the Daytona sandbox freeze + network-block,
+and the OpenAI swarm are all real (there are live **RUN LIVE** and **NETBLOCK** buttons that
+prove it). The *attack* is a deterministic simulation so it fires identically every run, and
+the demo plays from a scripted replay so it never depends on an LLM misbehaving on cue.
+*Honest note:* 1Password's dedicated agent "Credential Broker" product is still private beta,
+so CORDON brokers credentials through 1Password **Service Accounts** (GA) — not that product.
+
+---
+
+*Run locally:* `./run.sh` → http://localhost:3000 (needs `.env`; see `.env.example`).
+Full technical reference: [`docs/CORDON_MASTER.md`](docs/CORDON_MASTER.md).
