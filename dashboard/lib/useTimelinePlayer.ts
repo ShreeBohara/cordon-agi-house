@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CordonEvent } from "./events";
 import { initialState, reduce, type UIState } from "./state";
+import { STANDALONE, getTimeline } from "./demoData";
 
 const API = process.env.NEXT_PUBLIC_CORDON_API ?? "http://127.0.0.1:8000";
 
@@ -25,9 +26,14 @@ export function useTimelinePlayer() {
   const [speed, setSpeed] = useState(1);
 
   const load = useCallback(async (scenario: "deploy" | "payment", mode: "on" | "off", autoplay = true) => {
-    const r = await fetch(`${API}/demo/timeline?scenario=${scenario}&mode=${mode}`);
-    const d = await r.json();
-    setTimeline(d.events ?? []);
+    let events: TimelineEntry[];
+    if (STANDALONE) {
+      events = getTimeline(scenario, mode);
+    } else {
+      const r = await fetch(`${API}/demo/timeline?scenario=${scenario}&mode=${mode}`);
+      events = (await r.json()).events ?? [];
+    }
+    setTimeline(events);
     setPlayhead(-1);
     setPlaying(autoplay);
   }, []);

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { CordonEvent } from "./events";
 import { initialState, reduce } from "./state";
+import { STANDALONE, BENCHMARK_RESULT } from "./demoData";
 
 const API = process.env.NEXT_PUBLIC_CORDON_API ?? "http://127.0.0.1:8000";
 
@@ -13,6 +14,7 @@ export function useEventStream() {
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    if (STANDALONE) return; // no backend — the scripted demo runs entirely client-side
     const es = new EventSource(`${API}/stream`);
     esRef.current = es;
     es.onopen = () => setConnected(true);
@@ -46,6 +48,7 @@ export function useEventStream() {
   }, []);
 
   const fetchBenchmark = useCallback(async () => {
+    if (STANDALONE) return BENCHMARK_RESULT;
     const r = await fetch(`${API}/eval/run`, { method: "POST" });
     return r.json();
   }, []);

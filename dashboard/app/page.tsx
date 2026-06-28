@@ -14,6 +14,7 @@ import { BenchmarkOverlay, type BenchmarkData } from "@/components/BenchmarkOver
 import { NetblockOverlay, type NetblockData } from "@/components/NetblockOverlay";
 import { useEventStream } from "@/lib/useEventStream";
 import { useTimelinePlayer } from "@/lib/useTimelinePlayer";
+import { STANDALONE } from "@/lib/demoData";
 
 export default function Page() {
   const { state: liveState, connected, runLive, liveRunning, fetchBenchmark, runNetblockProof } = useEventStream();
@@ -70,14 +71,14 @@ export default function Page() {
         onMode={onMode}
         counters={state.counters}
         contained={state.contained}
-        connected={connected}
-        onRunLive={onRunLive}
+        connected={STANDALONE ? true : connected}
+        onRunLive={STANDALONE ? undefined : onRunLive}
         liveRunning={liveRunning}
         scenario={scenario}
         onScenario={onScenario}
         onBenchmark={openBench}
         benchLoading={benchLoading}
-        onNetblock={openNetblock}
+        onNetblock={STANDALONE ? undefined : openNetblock}
         netblockLoading={netblockLoading}
       />
 
