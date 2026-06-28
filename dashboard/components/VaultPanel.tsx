@@ -33,7 +33,7 @@ export function VaultPanel({ state }: { state: UIState }) {
         <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
           <HeroCard hero={hero} />
           <div className="space-y-1.5">
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-faint">runtime credentials</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">runtime credentials</p>
             {order.map((id) => (
               <CredRow key={id} name={agents[id].name} cred={agents[id].credential} vault={agents[id].vault} />
             ))}
@@ -65,13 +65,13 @@ function HeroCard({ hero }: { hero: UIState["hero"] }) {
           <LockBig locked={cfg.locked} color={cfg.color} />
         </motion.span>
         <div className="min-w-0">
-          <p className="font-sans text-[12.5px] font-semibold text-text">{heroTitle(hero.secret_ref)}</p>
-          <p className="truncate font-mono text-[9.5px]" style={{ color: cfg.color }}>{cfg.sub(hero.by)}</p>
+          <p className="font-sans text-[14.5px] font-semibold text-text">{heroTitle(hero.secret_ref)}</p>
+          <p className="truncate font-mono text-[11px]" style={{ color: cfg.color }}>{cfg.sub(hero.by)}</p>
         </div>
       </div>
       {cfg.line && (
         <p
-          className="mt-2.5 border-t pt-2 font-mono text-[10.5px] font-medium tracking-wide"
+          className="mt-2.5 border-t pt-2 font-mono text-[12px] font-medium tracking-wide"
           style={{ color: cfg.color, borderColor: `${cfg.color}33` }}
         >
           {hero.state === "denied" ? "✓ " : "⚠ "}
@@ -87,12 +87,12 @@ function CredRow({ name, cred, vault }: { name: string; cred?: string; vault: st
     vault === "issued" ? "#34d399" : vault === "revoked" ? "#4f8cff" : vault === "locked" ? "#9aa3b2" : "#59616f";
   const label = vault === "none" ? "—" : vault;
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-line bg-ink/40 px-2.5 py-1.5">
+    <div className="flex items-center justify-between gap-2 rounded-md border border-line bg-ink/40 px-2.5 py-2">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="font-sans text-[11px] text-text">{name}</span>
-        <span className="truncate font-mono text-[9px] text-faint">{shortRef(cred)}</span>
+        <span className="font-sans text-[12.5px] text-text">{name}</span>
+        <span className="truncate font-mono text-[10px] text-faint">{shortRef(cred)}</span>
       </div>
-      <span className="cordon-anim flex shrink-0 items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider" style={{ color }}>
+      <span className="cordon-anim flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider" style={{ color }}>
         <LockSmall open={vault === "issued"} color={color} />
         {label}
       </span>

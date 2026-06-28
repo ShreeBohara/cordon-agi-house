@@ -30,9 +30,9 @@ export function EventStreamPanel({ log }: { log: LogEntry[] }) {
   if (log.length === 0) return <Empty label="Awaiting events…" />;
 
   return (
-    <div ref={ref} className="h-full overflow-y-auto px-3 py-2 font-mono text-[11px] leading-[1.7]">
+    <div ref={ref} className="h-full overflow-y-auto px-3.5 py-2.5 font-mono text-[12.5px] leading-[1.75]">
       {log.map((e) => (
-        <div key={e.key} className="flex gap-2.5 py-px">
+        <div key={e.key} className="flex gap-2.5 py-0.5">
           <span className="shrink-0 tabular-nums text-faint">{fmt(e.ts)}</span>
           <span className={TONE[e.tone]}>{e.text}</span>
         </div>

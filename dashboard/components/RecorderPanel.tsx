@@ -70,10 +70,10 @@ export function RecorderPanel({ entries }: { entries: RecorderRow[] }) {
             return (
               <div
                 key={e.seq}
-                className="cursor-pointer border-b border-line/60 py-1.5 last:border-0"
+                className="cursor-pointer border-b border-line/60 py-2 last:border-0"
                 onClick={() => setOpen((o) => (o === i ? null : i))}
               >
-                <div className="flex items-center gap-2 font-mono text-[10.5px]">
+                <div className="flex items-center gap-2 font-mono text-[12px]">
                   <span className="text-faint tabular-nums">#{String(e.seq).padStart(2, "0")}</span>
                   <span style={{ color }}>{e.event_type}</span>
                   <span className="text-faint">·</span>
@@ -103,7 +103,7 @@ export function RecorderPanel({ entries }: { entries: RecorderRow[] }) {
 function HashChip({ label, value, broken }: { label: string; value: string; broken?: boolean }) {
   return (
     <code
-      className="rounded border px-1 py-0.5 text-[9px]"
+      className="rounded border px-1 py-0.5 text-[10px]"
       style={{
         borderColor: broken ? "#fb3b5366" : "var(--color-line)",
         color: broken ? "#fb3b53" : "var(--color-faint)",

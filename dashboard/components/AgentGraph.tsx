@@ -16,7 +16,7 @@ import { AgentNode } from "./AgentNode";
 
 // Left→right infection spine with a gentle wave, positioned by index so ANY
 // roster (deploy swarm, finance swarm, …) lays out cleanly. fitView scales it.
-const pos = (i: number) => ({ x: i * 250, y: i % 2 === 0 ? 0 : 86 });
+const pos = (i: number) => ({ x: i * 300, y: i % 2 === 0 ? 0 : 130 });
 
 const nodeTypes = { agent: AgentNode };
 
@@ -34,7 +34,7 @@ export function AgentGraph({ state }: { state: UIState }) {
     let raf = 0;
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.18, maxZoom: 1.1, duration: 200 }));
+      raf = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.14, maxZoom: 1.4, duration: 200 }));
     });
     ro.observe(wrap.current);
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };
@@ -79,7 +79,7 @@ export function AgentGraph({ state }: { state: UIState }) {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.18, maxZoom: 1.1 }}
+        fitViewOptions={{ padding: 0.14, maxZoom: 1.4 }}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}
         nodesConnectable={false}

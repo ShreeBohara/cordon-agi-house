@@ -8,11 +8,13 @@ import { motion } from "motion/react";
 // the graph back its width.
 export function EmailCard({ email }: { email?: { content: string; agent: string } }) {
   const [dismissed, setDismissed] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // default to the slim strip so the graph keeps full width (cards stay big);
+  // the presenter expands it to reveal the injection during the demo.
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     setDismissed(false);
-    setCollapsed(false);
+    setCollapsed(true);
   }, [email?.content]);
 
   if (!email || dismissed) return null;
