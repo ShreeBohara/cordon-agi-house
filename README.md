@@ -43,10 +43,11 @@ CORDON sits under your agent swarm and does three things:
 2. **Withholds keys from tainted agents (broker).** Every credential request goes through a
    broker. A tainted agent asking for a high-value key is **denied — and the key is never
    even fetched**, so the secret never enters the model's context.
-3. **Traces & quarantines the outbreak (cascade).** When an agent is confirmed compromised,
-   CORDON walks the graph of who-handed-work-to-whom, then **revokes credentials and freezes
-   the sandboxes** of every exposed agent, in infection order, in under a second. Healthy
-   agents keep working.
+3. **Traces & quarantines the outbreak (cascade).** A denied sensitive request from a
+   tainted agent triggers tracing along the handoffs that carried taint. CORDON
+   **denies future broker requests** from the exposed agents and **attempts to freeze
+   their manager-owned sandboxes** in graph order. Healthy agents outside that exposed
+   chain are untouched. Live sandbox outcomes depend on the configured integration.
 
 Every decision is written to a **signed, tamper-evident log** — so you can always prove who
 authorized what, and why it was stopped.
@@ -61,19 +62,51 @@ authorized what, and why it was stopped.
 
 ## How it works (the short version)
 
-An agent is only quarantined when it trips the **lethal trifecta**: it's *tainted*, it
-*requests a sensitive credential*, **and** it *attempts an outbound action*. Reading an email
-alone never triggers it. That's what keeps the system useful — a tainted agent can still do
-safe work; it just can't get the crown-jewel keys.
+Reading an untrusted tool result marks an agent tainted, and handoffs carry that state to
+the next agent. A tainted agent can still do non-sensitive work. When it requests a
+sensitive credential, the broker denies the request before resolving the secret.
 
-It runs on real infrastructure:
+In this prototype, that denied request triggers contact tracing and cascade quarantine.
+The Tool Proxy records it as the outbound attempt in the **lethal trifecta** event; the
+trigger does not require a completed network exfiltration.
 
-- **Daytona** — every agent runs in its own isolated sandbox; quarantine calls the real
-  `sandbox.stop()` + `network_block_all` to cut it off.
+```mermaid
+flowchart TD
+  U[Untrusted tool result or agent handoff] --> P[Tool Proxy]
+  P --> T[Taint store and contact graph]
+  P --> B{Credential broker checks agent state}
+  T -.-> B
+  B -->|tainted and sensitive, or quarantined| D[Deny without resolving the secret]
+  B -->|allowed request| R[Configured 1Password resolver or offline stub]
+  D -->|tainted and sensitive| Q[Trace origin and exposed agents]
+  T -.-> Q
+  Q --> K[Quarantine: future broker deny and sandbox freeze attempt]
+  P -.-> A[Signed hash-chained audit events]
+  D -.-> A
+  K -.-> A
+  A --> V[SSE event stream and dashboard]
+```
+
+The boundary is the instrumented Tool Proxy: tool results need correct trust labels, and
+handoffs need to pass through it. Contact tracing follows the edges that carried taint.
+Broker "revocation" denies future requests by a quarantined agent; it does not revoke a
+1Password Service Account token. The freezer acts on sandboxes created by the Daytona
+manager and can fail or skip a placeholder sandbox. A quarantine event alone is not proof
+that a live sandbox stopped.
+
+The same security path supports configured live integrations:
+
+- **Daytona** — the live run creates agent sandboxes; quarantine attempts
+  `network_block_all` and `stop()` on the manager's sandboxes.
 - **1Password** — keys live in 1Password, resolved at runtime via a Service Account
   (`op://` references); a tainted agent's request is simply never resolved.
 - **OpenAI Agents SDK** — the live 5-agent swarm; every tool call and handoff routes through
   CORDON's single chokepoint (the Tool Proxy).
+
+Without the integration credentials, the resolver and freezer use offline stubs. The
+scripted demo is a replay of the event contract. See the source for the [Tool Proxy](control_plane/proxy.py),
+[broker](control_plane/broker.py), [contact graph](control_plane/graph.py),
+[quarantine engine](control_plane/quarantine.py) and [Daytona freezer](control_plane/integrations/daytona.py).
 
 ---
 
@@ -105,13 +138,12 @@ system stays fully useful; it only refuses to give crown-jewel access to somethi
 touched the outside world.
 
 **“If a tainted agent can't get credentials, it can't deploy. So who actually does it?”**
-In a normal, clean run nothing is tainted, so the deploy happens as usual. Taint only blocks
-the case where untrusted input has reached the agent asking for the key — which is exactly
-the case you *want* to stop. For a legitimate sensitive action that did follow untrusted
-input, CORDON is **freeze-not-kill**: a named human approves it (logged), so a human stays in
-the loop for the high-stakes step instead of the system silently trusting a possibly-poisoned
-request. You can also keep the key-holder (the Deployer) off untrusted inputs entirely — it
-stays clean and does the deploy; the tainted agents simply can't hijack it.
+In a clean run, the broker can permit a sensitive credential request. A legitimate sensitive
+action following untrusted input is still denied: this is the benign false positive disclosed
+in the benchmark. The prototype does not implement a human approval or resume flow, and
+taint cannot be cleared within a run. Keeping a key-holder such as the Deployer clean requires
+avoiding both untrusted reads and handoffs that carry taint; delegation from a tainted agent
+also taints the recipient.
 
 **“If an agent that reads outside data can never hold keys, why not just hard-code that with
 roles? What does CORDON add?”**
@@ -133,19 +165,25 @@ evades and that false-positives on innocent text. CORDON doesn't guess: it track
 In our benchmark that's 0% vs 60% attack success — and rephrasing can't beat it.
 
 **“What if the attacker stays single-agent, or goes low-and-slow?”**
-Single-agent exfiltration is already stopped by the deterministic gate on key issuance — once
-tainted, an agent never gets the sensitive key, spread or not. Contact tracing handles the
-multi-agent case you can't avoid in a real swarm (delegation is the capability being stolen).
-Low-and-slow can defeat the probabilistic *trigger* for the cascade, but not the deterministic
-*gate* — a limit we name openly.
+Within the instrumented boundary, a tainted agent's sensitive credential request is denied
+before the resolver is called, even if it never hands work to another agent. That same
+denial deterministically triggers the cascade in this prototype. Contact tracing covers
+the multi-agent path along taint-carrying handoffs. Slow attacks encounter the same gate
+when their untrusted inputs and handoffs are correctly labeled and routed through the
+Tool Proxy; actions outside that boundary are not covered.
 
 **“Is this real or just a demo?”**
-The security logic, the 1Password runtime resolve, the Daytona sandbox freeze + network-block,
-and the OpenAI swarm are all real (there are live **RUN LIVE** and **NETBLOCK** buttons that
-prove it). The *attack* is a deterministic simulation so it fires identically every run, and
-the demo plays from a scripted replay so it never depends on an LLM misbehaving on cue.
-*Honest note:* 1Password's dedicated agent "Credential Broker" product is still private beta,
-so CORDON brokers credentials through 1Password **Service Accounts** (GA) — not that product.
+The security logic is implemented in the control plane. With integration credentials
+configured, **RUN LIVE** exercises the OpenAI swarm, 1Password Service Account resolution
+and Daytona sandbox operations; without them, the resolver and freezer use offline stubs.
+**NETBLOCK** reports a before-and-after network check for its test sandbox. A quarantine
+event records the requested actions; successful network blocking and stopping of each
+live sandbox must be checked separately.
+
+The *attack* is a deterministic simulation, and the default demo plays from a scripted
+replay so it never depends on an LLM misbehaving on cue. CORDON's credential integration
+uses the 1Password Service Account resolver; broker revocation blocks future requests
+through CORDON.
 
 ---
 
