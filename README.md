@@ -138,13 +138,12 @@ system stays fully useful; it only refuses to give crown-jewel access to somethi
 touched the outside world.
 
 **“If a tainted agent can't get credentials, it can't deploy. So who actually does it?”**
-In a normal, clean run nothing is tainted, so the deploy happens as usual. Taint only blocks
-the case where untrusted input has reached the agent asking for the key — which is exactly
-the case you *want* to stop. For a legitimate sensitive action that did follow untrusted
-input, CORDON is **freeze-not-kill**: a named human approves it (logged), so a human stays in
-the loop for the high-stakes step instead of the system silently trusting a possibly-poisoned
-request. You can also keep the key-holder (the Deployer) off untrusted inputs entirely — it
-stays clean and does the deploy; the tainted agents simply can't hijack it.
+In a clean run, the broker can permit a sensitive credential request. A legitimate sensitive
+action following untrusted input is still denied: this is the benign false positive disclosed
+in the benchmark. The prototype does not implement a human approval or resume flow, and
+taint cannot be cleared within a run. Keeping a key-holder such as the Deployer clean requires
+avoiding both untrusted reads and handoffs that carry taint; delegation from a tainted agent
+also taints the recipient.
 
 **“If an agent that reads outside data can never hold keys, why not just hard-code that with
 roles? What does CORDON add?”**
