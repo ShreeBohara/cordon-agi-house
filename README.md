@@ -61,19 +61,51 @@ authorized what, and why it was stopped.
 
 ## How it works (the short version)
 
-An agent is only quarantined when it trips the **lethal trifecta**: it's *tainted*, it
-*requests a sensitive credential*, **and** it *attempts an outbound action*. Reading an email
-alone never triggers it. That's what keeps the system useful — a tainted agent can still do
-safe work; it just can't get the crown-jewel keys.
+Reading an untrusted tool result marks an agent tainted, and handoffs carry that state to
+the next agent. A tainted agent can still do non-sensitive work. When it requests a
+sensitive credential, the broker denies the request before resolving the secret.
 
-It runs on real infrastructure:
+In this prototype, that denied request triggers contact tracing and cascade quarantine.
+The Tool Proxy records it as the outbound attempt in the **lethal trifecta** event; the
+trigger does not require a completed network exfiltration.
 
-- **Daytona** — every agent runs in its own isolated sandbox; quarantine calls the real
-  `sandbox.stop()` + `network_block_all` to cut it off.
+```mermaid
+flowchart TD
+  U[Untrusted tool result or agent handoff] --> P[Tool Proxy]
+  P --> T[Taint store and contact graph]
+  P --> B{Credential broker checks agent state}
+  T -.-> B
+  B -->|tainted and sensitive, or quarantined| D[Deny without resolving the secret]
+  B -->|allowed request| R[Configured 1Password resolver or offline stub]
+  D -->|tainted and sensitive| Q[Trace origin and exposed agents]
+  T -.-> Q
+  Q --> K[Quarantine: future broker deny and sandbox freeze attempt]
+  P -.-> A[Signed hash-chained audit events]
+  D -.-> A
+  K -.-> A
+  A --> V[SSE event stream and dashboard]
+```
+
+The boundary is the instrumented Tool Proxy: tool results need correct trust labels, and
+handoffs need to pass through it. Contact tracing follows the edges that carried taint.
+Broker "revocation" denies future requests by a quarantined agent; it does not revoke a
+1Password Service Account token. The freezer acts on sandboxes created by the Daytona
+manager and can fail or skip a placeholder sandbox. A quarantine event alone is not proof
+that a live sandbox stopped.
+
+The same security path supports configured live integrations:
+
+- **Daytona** — the live run creates agent sandboxes; quarantine attempts
+  `network_block_all` and `stop()` on the manager's sandboxes.
 - **1Password** — keys live in 1Password, resolved at runtime via a Service Account
   (`op://` references); a tainted agent's request is simply never resolved.
 - **OpenAI Agents SDK** — the live 5-agent swarm; every tool call and handoff routes through
   CORDON's single chokepoint (the Tool Proxy).
+
+Without the integration credentials, the resolver and freezer use offline stubs. The
+scripted demo is a replay of the event contract. See the source for the [Tool Proxy](control_plane/proxy.py),
+[broker](control_plane/broker.py), [contact graph](control_plane/graph.py),
+[quarantine engine](control_plane/quarantine.py) and [Daytona freezer](control_plane/integrations/daytona.py).
 
 ---
 
