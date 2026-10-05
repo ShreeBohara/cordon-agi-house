@@ -43,10 +43,11 @@ CORDON sits under your agent swarm and does three things:
 2. **Withholds keys from tainted agents (broker).** Every credential request goes through a
    broker. A tainted agent asking for a high-value key is **denied — and the key is never
    even fetched**, so the secret never enters the model's context.
-3. **Traces & quarantines the outbreak (cascade).** When an agent is confirmed compromised,
-   CORDON walks the graph of who-handed-work-to-whom, then **revokes credentials and freezes
-   the sandboxes** of every exposed agent, in infection order, in under a second. Healthy
-   agents keep working.
+3. **Traces & quarantines the outbreak (cascade).** A denied sensitive request from a
+   tainted agent triggers tracing along the handoffs that carried taint. CORDON
+   **denies future broker requests** from the exposed agents and **attempts to freeze
+   their manager-owned sandboxes** in graph order. Healthy agents outside that exposed
+   chain are untouched. Live sandbox outcomes depend on the configured integration.
 
 Every decision is written to a **signed, tamper-evident log** — so you can always prove who
 authorized what, and why it was stopped.
@@ -165,19 +166,25 @@ evades and that false-positives on innocent text. CORDON doesn't guess: it track
 In our benchmark that's 0% vs 60% attack success — and rephrasing can't beat it.
 
 **“What if the attacker stays single-agent, or goes low-and-slow?”**
-Single-agent exfiltration is already stopped by the deterministic gate on key issuance — once
-tainted, an agent never gets the sensitive key, spread or not. Contact tracing handles the
-multi-agent case you can't avoid in a real swarm (delegation is the capability being stolen).
-Low-and-slow can defeat the probabilistic *trigger* for the cascade, but not the deterministic
-*gate* — a limit we name openly.
+Within the instrumented boundary, a tainted agent's sensitive credential request is denied
+before the resolver is called, even if it never hands work to another agent. That same
+denial deterministically triggers the cascade in this prototype. Contact tracing covers
+the multi-agent path along taint-carrying handoffs. Slow attacks encounter the same gate
+when their untrusted inputs and handoffs are correctly labeled and routed through the
+Tool Proxy; actions outside that boundary are not covered.
 
 **“Is this real or just a demo?”**
-The security logic, the 1Password runtime resolve, the Daytona sandbox freeze + network-block,
-and the OpenAI swarm are all real (there are live **RUN LIVE** and **NETBLOCK** buttons that
-prove it). The *attack* is a deterministic simulation so it fires identically every run, and
-the demo plays from a scripted replay so it never depends on an LLM misbehaving on cue.
-*Honest note:* 1Password's dedicated agent "Credential Broker" product is still private beta,
-so CORDON brokers credentials through 1Password **Service Accounts** (GA) — not that product.
+The security logic is implemented in the control plane. With integration credentials
+configured, **RUN LIVE** exercises the OpenAI swarm, 1Password Service Account resolution
+and Daytona sandbox operations; without them, the resolver and freezer use offline stubs.
+**NETBLOCK** reports a before-and-after network check for its test sandbox. A quarantine
+event records the requested actions; successful network blocking and stopping of each
+live sandbox must be checked separately.
+
+The *attack* is a deterministic simulation, and the default demo plays from a scripted
+replay so it never depends on an LLM misbehaving on cue. CORDON's credential integration
+uses the 1Password Service Account resolver; broker revocation blocks future requests
+through CORDON.
 
 ---
 
